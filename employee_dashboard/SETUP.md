@@ -36,18 +36,26 @@ git config --global user.name "Your Name"
 git config --global user.email "you@example.com"
 ```
 
-Stage, review, commit, and push the project code:
+Stage, review, commit, and push the project code. First create the repository on GitHub, open it, and copy the **HTTPS** URL from its **Code** button. This is a Git command, not a dashboard login link. Replace the example URL below with the URL you copied; do not use the literal placeholder names.
 
 ```powershell
 git add .
 git status
 git diff --cached --stat
 git commit -m "Initial employee dashboard"
-git remote add origin https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPOSITORY_NAME.git
+git remote add origin https://github.com/ACTUAL_USERNAME/ACTUAL_REPOSITORY.git
 git push -u origin main
 ```
 
-Replace the URL placeholders with the HTTPS URL for your new GitHub repository. Review the staged changes before committing. If Git says that `origin` already exists, inspect it using `git remote -v` and update it to your own repository URL rather than adding a second remote.
+Review the staged changes before committing. If `git remote add origin` says that `origin` already exists, replace it with your real repository URL and push:
+
+```powershell
+git remote set-url origin https://github.com/ACTUAL_USERNAME/ACTUAL_REPOSITORY.git
+git remote -v
+git push -u origin main
+```
+
+If pushing returns **404**, verify that the repository exists and the URL matches its GitHub HTTPS URL exactly. For a private repository, make sure you are authenticated to GitHub with an account that has access.
 
 ## 2. Teammates clone the repository
 
