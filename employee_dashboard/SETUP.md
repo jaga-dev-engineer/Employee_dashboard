@@ -14,7 +14,12 @@ This guide covers creating your own GitHub repository, sharing it with teammates
 
 On GitHub, create a **Private** repository. For the first push, leave the options to create a README, `.gitignore`, or license unchecked; this project already has these files.
 
-Open PowerShell in this project folder (the one containing `README.md` and `requirements.txt`). If this folder is not already a Git repository of its own, initialize it:
+There are two folders to note:
+
+- **Repository root:** the folder that contains `.git` and where `git clone` creates the repository.
+- **Project folder:** the `employee_dashboard` folder inside the repository, containing this setup guide and `requirements.txt`.
+
+Run Git commands from the repository root. In the current layout, enter the outer `employee_dashboard` folder containing the inner `employee_dashboard` folder. If this folder is not already a Git repository of its own, initialize it:
 
 ```powershell
 git init -b main
@@ -23,11 +28,11 @@ git init -b main
 Before staging, confirm that the real workbook and local credentials are ignored:
 
 ```powershell
-git check-ignore Employee_data.xlsx .env
+git check-ignore employee_dashboard\Employee_data.xlsx employee_dashboard\.env
 git status --short
 ```
 
-`git check-ignore` should list both files. If it does not, stop and check `.gitignore`. Never commit the real employee workbook, `.env`, password hashes, or session secrets. `Employee_data.xlsx` is excluded from Git because it contains employee information; provide it to authorized teammates separately using your organization's approved secure file sharing.
+`git check-ignore` should list both files. If it does not, stop and check `employee_dashboard\.gitignore`. Never commit the real employee workbook, `.env`, password hashes, or session secrets. `Employee_data.xlsx` is excluded from Git because it contains employee information; provide it to authorized teammates separately using your organization's approved secure file sharing.
 
 If you have not configured Git on this computer before, set your commit identity:
 
@@ -59,15 +64,16 @@ If pushing returns **404**, verify that the repository exists and the URL matche
 
 ## 2. Teammates clone the repository
 
-Invite teammates as collaborators to the private GitHub repository. They need Git installed and permission to access it. In PowerShell, each teammate runs:
+Invite teammates as collaborators to the private GitHub repository. They need Git installed and permission to access it. In PowerShell, each teammate clones the repo and changes into the inner project folder:
 
 ```powershell
 cd C:\path\where\you\keep\projects
 git clone https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPOSITORY_NAME.git
 cd YOUR_REPOSITORY_NAME
+cd employee_dashboard
 ```
 
-Replace the example path and repository URL with the values for your team. Teammates must get `Employee_data.xlsx` separately from the approved secure file-sharing location and copy it into the cloned project folder beside `README.md`. Do not send `.env`; each teammate creates their own local login in step 5.
+Replace the example path and repository URL with the values for your team. Run the Python setup and app commands below from this inner project folder. Teammates must get `Employee_data.xlsx` separately from the approved secure file-sharing location and copy it into this folder beside `requirements.txt`. Do not send `.env`; each teammate creates their own local login in step 5.
 
 ## 3. Check Python
 
