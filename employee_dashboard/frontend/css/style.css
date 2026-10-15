@@ -1,0 +1,47 @@
+:root {
+  --navy: #14325e;
+  --blue: #2f6fdb;
+  --bg: #f3f5fa;
+  --ink: #1f2a44;
+  --muted: #6b7690;
+  --line: #e3e8f2;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+}
+
+.app-header {
+  background: linear-gradient(90deg, var(--navy), #2a4f8f);
+  color: #fff;
+  padding: 0.9rem 0;
+  margin-bottom: 1.75rem;
+}
+.app-header .brand { font-size: 1.35rem; font-weight: 700; letter-spacing: 0.2px; }
+.app-header .nav-link { color: rgba(255, 255, 255, 0.75); padding: 0.25rem 0.75rem; border-radius: 6px; }
+.app-header .nav-link:hover { color: #fff; }
+.app-header .nav-link.active { color: #fff; background: rgba(255, 255, 255, 0.16); }
+
+.card { border: 1px solid var(--line); border-radius: 10px; box-shadow: none; }
+.card h5 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+
+.stat-card { border-left: 4px solid var(--blue); }
+.stat-card.s2 { border-left-color: #20a67a; }
+.stat-card.s3 { border-left-color: #e08a1e; }
+.stat-card.s4 { border-left-color: #8b5cc6; }
+.stat-label { color: var(--muted); font-size: 0.85rem; }
+.stat-value { font-size: 2rem; font-weight: 700; line-height: 1.2; }
+
+.table > :not(caption) > * > * { padding: 0.55rem 0.75rem; }
+.table thead th { color: var(--muted); font-weight: 600; font-size: 0.85rem; border-bottom-color: var(--line); }
+
+.list-group-item.active { background: var(--blue); border-color: var(--blue); }
+.chart-box { position: relative; height: 280px; }
+.login-card { max-width: 440px; }
+
+a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible {
+  outline: 3px solid rgba(47, 111, 219, 0.45);
+  outline-offset: 2px;
+}
