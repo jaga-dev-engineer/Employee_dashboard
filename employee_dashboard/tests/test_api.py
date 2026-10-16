@@ -92,6 +92,51 @@ def test_location_and_mapping_aggregations(client):
     assert sum(item["count"] for item in mappings) == client.get("/api/dashboard/summary").json()["total_employees"]
 
 
+def test_workbook_version_changes_after_save(client, tmp_path, monkeypatch):
+    workbook_path = tmp_path / "Employee_data.xlsx"
+    monkeypatch.setattr(excel_service, "EXCEL_PATH", workbook_path)
+    row = {
+        "S.no": "1",
+        "Employee ID": "FD00001",
+        "Employee Name": "Version Check",
+        "Managers": "Manager One",
+        "Email": "version@example.com",
+        "Mapped to Project": "N",
+        "Location": "Pune",
+        "Contact Number": "1234567890",
+    }
+    pd.DataFrame([row]).to_excel(workbook_path, index=False)
+    first_version = client.get("/api/dashboard/version").json()["version"]
+
+    pd.DataFrame([{**row, "Managers": "Manager Two"}]).to_excel(workbook_path, index=False)
+    stat = workbook_path.stat()
+    os.utime(workbook_path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+
+    second_version = client.get("/api/dashboard/version").json()["version"]
+    assert second_version != first_version
+
+
+def test_manager_counts_and_filter(client):
+    employees = client.get("/api/employees").json()
+    manager_counts = client.get("/api/dashboard/by-manager").json()
+    expected = {}
+    for employee in employees:
+        if employee["manager"]:
+            expected[employee["manager"]] = expected.get(employee["manager"], 0) + 1
+
+    assert {row["label"]: row["count"] for row in manager_counts} == expected
+    assert [row["count"] for row in manager_counts] == sorted(
+        (row["count"] for row in manager_counts), reverse=True
+    )
+
+    manager = manager_counts[0]["label"]
+    response = client.get("/api/employees", params={"manager": manager})
+    assert response.status_code == 200
+    assert response.json()
+    assert all(employee["manager"] == manager for employee in response.json())
+    assert len(response.json()) == expected[manager]
+
+
 def test_employee_filters(client):
     employees = client.get("/api/employees").json()
     location = next(employee["location"] for employee in employees if employee["location"])
@@ -115,6 +160,7 @@ def test_saved_workbook_changes_are_loaded(client, tmp_path, monkeypatch):
         "S.no": "1",
         "Employee ID": "FD00001",
         "Employee Name": "Initial Name",
+        "Managers": "Initial Manager",
         "Email": "initial@example.com",
         "Mapped to Project": "N",
         "Location": "Pune",
@@ -123,7 +169,12 @@ def test_saved_workbook_changes_are_loaded(client, tmp_path, monkeypatch):
     pd.DataFrame([first_row]).to_excel(workbook_path, index=False)
     assert client.get("/api/employees").json()[0]["name"] == "Initial Name"
 
-    updated_row = {**first_row, "Employee ID": "FD00002", "Employee Name": "Updated Name"}
+    updated_row = {
+        **first_row,
+        "Employee ID": "FD00002",
+        "Employee Name": "Updated Name",
+        "Managers": "Updated Manager",
+    }
     pd.DataFrame([updated_row]).to_excel(workbook_path, index=False)
     stat = workbook_path.stat()
     os.utime(workbook_path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
@@ -131,3 +182,6 @@ def test_saved_workbook_changes_are_loaded(client, tmp_path, monkeypatch):
     employees = client.get("/api/employees").json()
     assert employees[0]["employee_id"] == "FD00002"
     assert employees[0]["name"] == "Updated Name"
+    assert employees[0]["manager"] == "Updated Manager"
+    manager_counts = client.get("/api/dashboard/by-manager").json()
+    assert manager_counts == [{"label": "Updated Manager", "count": 1}]

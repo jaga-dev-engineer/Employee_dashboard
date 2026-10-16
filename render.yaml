@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: employee-dashboard-demo
+    runtime: python
+    rootDir: employee_dashboard
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /login
+    envVars:
+      - key: EXCEL_PATH
+        value: data/employees.xlsx
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: LOGIN_EMAIL
+        sync: false
+      - key: LOGIN_PASSWORD_HASH
+        sync: false

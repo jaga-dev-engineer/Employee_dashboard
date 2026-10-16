@@ -9,6 +9,7 @@ first = ["Arun", "Kumar", "Priya", "Kavya", "Vivek", "Chandran", "Meena", "Divya
          "Karthik", "Sanjay", "Anitha", "Rahul", "Deepa", "Naveen", "Lakshmi"]
 last = ["S", "R", "K", "M", "P", "V", "N", "G"]
 locations = ["Chennai", "Bangalore", "Mumbai", "Hyderabad"]
+managers = ["Ravi", "Suresh", "Kumar", "Arun"]
 
 rows = []
 for i in range(1, 61):
@@ -16,6 +17,7 @@ for i in range(1, 61):
         "S.no": i,
         "Employee ID": f"E{i:03d}",
         "Employee Name": f"{random.choice(first)} {random.choice(last)}",
+        "Managers": random.choice(managers),
         "Email": f"employee{i}@example.com",
         "Mapped to Project": random.choice(["Y", "N"]),
         "Location": random.choice(locations),

@@ -33,28 +33,59 @@ async function loadMappingTable() {
     || `<tr><td colspan="2" class="text-muted">No data</td></tr>`;
 }
 
+async function loadManagerTable() {
+  const table = document.getElementById("manager-table");
+  try {
+    const items = await getJSON("/api/dashboard/by-manager");
+    table.innerHTML =
+      items.map(item => `<tr><td>${esc(item.label)}</td><td class="text-end">${item.count}</td></tr>`).join("")
+      || `<tr><td colspan="2" class="text-muted">No manager data</td></tr>`;
+  } catch (error) {
+    table.innerHTML =
+      `<tr><td colspan="2" class="text-danger">Could not load manager counts: ${esc(error.message)}. Restart the dashboard server and refresh.</td></tr>`;
+    throw error;
+  }
+}
+
 async function loadEmployeeTable() {
   const employees = await getJSON("/api/employees");
   document.getElementById("employee-table").innerHTML = employees.map(employee => `<tr>
     <td>${esc(employee.serial_number)}</td><td>${esc(employee.employee_id)}</td>
-    <td>${esc(employee.name)}</td><td>${esc(employee.email)}</td>
+    <td>${esc(employee.name)}</td><td>${esc(employee.manager)}</td><td>${esc(employee.email)}</td>
     <td>${esc(employee.mapped_to_project)}</td><td>${esc(employee.location)}</td>
     <td>${esc(employee.contact_number)}</td>
-  </tr>`).join("") || `<tr><td colspan="7" class="text-center text-muted">No employee data</td></tr>`;
+  </tr>`).join("") || `<tr><td colspan="8" class="text-center text-muted">No employee data</td></tr>`;
 }
 
 async function refreshDashboard() {
   const error = document.getElementById("error");
   try {
-    await Promise.all([loadSummary(), loadLocationChart(), loadMappingTable(), loadEmployeeTable()]);
+    await Promise.all([loadSummary(), loadLocationChart(), loadMappingTable(), loadManagerTable(), loadEmployeeTable()]);
     error.classList.add("d-none");
     document.getElementById("last-updated").textContent =
       `Data refreshed ${new Date().toLocaleTimeString()}`;
   } catch (e) {
     showError(e.message);
+    throw e;
   }
 }
 
-document.getElementById("refresh-dashboard").addEventListener("click", refreshDashboard);
-refreshDashboard();
-setInterval(refreshDashboard, 60000);
+async function initDashboard() {
+  let initialVersion = null;
+  try {
+    initialVersion = (await getJSON("/api/dashboard/version")).version;
+  } catch (error) {
+    showError(error.message);
+  }
+
+  try {
+    await refreshDashboard();
+  } catch {
+    initialVersion = null;
+  }
+  watchWorkbookChanges(refreshDashboard, initialVersion);
+}
+
+document.getElementById("refresh-dashboard").addEventListener("click", () =>
+  refreshDashboard().catch(() => {}));
+initDashboard();

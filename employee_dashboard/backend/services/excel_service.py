@@ -4,8 +4,16 @@ import pandas as pd
 
 from backend.config import COLUMNS, EXCEL_PATH
 
-_cache_signature: tuple[str, int, int] | None = None
+_cache_signature: tuple[str, int, int, int] | None = None
 _cached_employees: pd.DataFrame | None = None
+
+
+def get_workbook_version() -> str:
+    if not EXCEL_PATH.exists():
+        raise FileNotFoundError(f"Excel file not found: {EXCEL_PATH}")
+
+    stat = EXCEL_PATH.stat()
+    return f"{stat.st_mtime_ns}-{stat.st_ctime_ns}-{stat.st_size}"
 
 
 def load_employees() -> pd.DataFrame:
@@ -15,7 +23,12 @@ def load_employees() -> pd.DataFrame:
         raise FileNotFoundError(f"Excel file not found: {EXCEL_PATH}")
 
     stat = EXCEL_PATH.stat()
-    signature = (str(EXCEL_PATH.resolve()), stat.st_mtime_ns, stat.st_size)
+    signature = (
+        str(EXCEL_PATH.resolve()),
+        stat.st_mtime_ns,
+        stat.st_ctime_ns,
+        stat.st_size,
+    )
     if _cached_employees is not None and _cache_signature == signature:
         return _cached_employees
 

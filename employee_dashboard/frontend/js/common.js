@@ -25,6 +25,27 @@ function showError(message) {
   box.classList.remove("d-none");
 }
 
+function watchWorkbookChanges(onChange, initialVersion) {
+  let currentVersion = initialVersion;
+  let checking = false;
+
+  window.setInterval(async () => {
+    if (checking) return;
+    checking = true;
+    try {
+      const data = await getJSON("/api/dashboard/version");
+      if (currentVersion === null || data.version !== currentVersion) {
+        await onChange();
+        currentVersion = data.version;
+      }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      checking = false;
+    }
+  }, 10000);
+}
+
 document.getElementById("logout").addEventListener("click", async () => {
   try {
     const response = await fetch("/api/auth/logout", { method: "POST", cache: "no-store" });

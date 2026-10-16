@@ -1,5 +1,9 @@
 """Business logic: aggregations and filters used by the API."""
-from backend.services.excel_service import load_employees, to_records
+from backend.services.excel_service import get_workbook_version, load_employees, to_records
+
+
+def get_data_version() -> dict[str, str]:
+    return {"version": get_workbook_version()}
 
 
 def get_summary() -> dict:
@@ -19,6 +23,13 @@ def get_distribution_by_location() -> list[dict]:
     return [{"label": location, "count": int(count)} for location, count in counts.items()]
 
 
+def get_employee_counts_by_manager() -> list[dict]:
+    df = load_employees()
+    df = df[df["Managers"] != ""]
+    counts = df.groupby("Managers").size().sort_values(ascending=False)
+    return [{"label": manager, "count": int(count)} for manager, count in counts.items()]
+
+
 def get_distribution_by_project_mapping() -> list[dict]:
     df = load_employees()
     mapping = df["Mapped to Project"].replace("", "Not specified")
@@ -29,10 +40,13 @@ def get_distribution_by_project_mapping() -> list[dict]:
 def get_employees(
     location: str | None = None,
     mapped_to_project: str | None = None,
+    manager: str | None = None,
 ) -> list[dict]:
     df = load_employees()
     if location:
         df = df[df["Location"].str.lower() == location.strip().lower()]
     if mapped_to_project:
         df = df[df["Mapped to Project"].str.lower() == mapped_to_project.strip().lower()]
+    if manager:
+        df = df[df["Managers"].str.casefold() == manager.strip().casefold()]
     return to_records(df)

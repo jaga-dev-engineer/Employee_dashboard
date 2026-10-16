@@ -7,5 +7,9 @@ router = APIRouter(prefix="/api/employees", tags=["Employees"])
 
 
 @router.get("", response_model=list[Employee])
-def list_employees(location: str | None = None, mapped_to_project: str | None = None):
-    return dashboard_service.get_employees(location, mapped_to_project)
+def list_employees(
+    location: str | None = None,
+    mapped_to_project: str | None = None,
+    manager: str | None = None,
+):
+    return dashboard_service.get_employees(location, mapped_to_project, manager)

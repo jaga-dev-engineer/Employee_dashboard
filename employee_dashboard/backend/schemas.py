@@ -5,6 +5,7 @@ class Employee(BaseModel):
     serial_number: str
     employee_id: str
     name: str
+    manager: str
     email: str
     mapped_to_project: str
     location: str

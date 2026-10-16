@@ -112,6 +112,7 @@ Each local installation needs its own `.env` and login. If `.env` already exists
 ```
 
 Keep the PowerShell window open while using the dashboard. To stop the server, focus that window and press **Ctrl+C**.
+After pulling project code updates, stop the server with **Ctrl+C**, start it again with `.\run.bat`, and reload the browser page.
 
 ## 7. Sign in
 
@@ -123,18 +124,31 @@ Sign in with the email and password created in step 5. Use **Sign out** to end t
 
 ## 8. Refresh workbook data
 
-Edit `Employee_data.xlsx` in the project root and save the workbook. Click **Refresh data** on the dashboard or reload the page. The dashboard also checks for saved changes every 60 seconds. Do not edit the workbook while it is open in Excel if Excel prevents other programs from reading the saved file.
+Edit `Employee_data.xlsx` at the path read by the running server and save the workbook. Dashboard pages check for saved changes every 10 seconds and automatically refresh after save. **Refresh data** is also available for immediate manual refresh. Do not edit the workbook while Excel prevents other programs from reading the saved file.
+
+By default, the server reads `Employee_data.xlsx` in the project folder. To watch a workbook in another location, configure `EXCEL_PATH` in the local `.env` to its absolute path (for example, a synced folder path). The server computer must be able to access and read that path; a workbook on a manager's separate, unsynced computer will not update this dashboard.
 
 The workbook must have these exact headers in the first row:
 
-| S.no | Employee ID | Employee Name | Email | Mapped to Project | Location | Contact Number |
+| S.no | Employee ID | Employee Name | Managers | Email | Mapped to Project | Location | Contact Number |
 |---|---|---|---|---|---|---|
 
 ## Important: local copy versus team-wide access
 
-These steps run the app on the teammate's own computer at `localhost`. Each person has their own copy of the workbook, so changes made to one person's file do not automatically appear on other people's computers.
+These steps run the app on the teammate's own computer at `localhost`. Each person has their own workbook copy, so changes made to one person's file do not automatically appear on other people's computers. To have one dashboard follow the manager's edits, the server must read the same shared or synced workbook file that the manager saves; it cannot detect changes made to a separate copy.
 
 The launcher listens on the computer's network interfaces, but that does not make the app available over the internet. Do not expose this development server or its port directly to the public internet. To provide one shared live dashboard, deploy it to an approved Python hosting service with HTTPS, configure the login settings securely on that host, and store the workbook in the deployed app's persistent storage.
+
+## Publish a free demo on Render
+
+The repository root contains `render.yaml` for a public demo deployment. It uses the synthetic `data/employees.xlsx`, not the private `Employee_data.xlsx`.
+
+1. Push the repository to GitHub, then sign in to Render and choose **New → Blueprint**.
+2. Connect the GitHub repository and deploy the `employee-dashboard-demo` service from `render.yaml`.
+3. When prompted for `LOGIN_EMAIL` and `LOGIN_PASSWORD_HASH`, provide the demo account email and the hash from your local `.env`. Do not paste or upload the `.env` file; Render generates its own `SESSION_SECRET`.
+4. After Render reports the service is live, open its `onrender.com` URL with `/login` appended and share that HTTPS URL with your team. Do not share `http://localhost:8000/`; that points to each teammate's own computer.
+
+The free service may take a short time to wake after inactivity. It is a demo only: the private workbook is excluded from Git, and the free service does not provide persistent storage for workbook changes. The deployed demo therefore shows synthetic sample rows and cannot reflect the manager's real Excel edits. To publish the real dashboard, use an approved paid host with persistent storage or a secure shared-storage integration, and keep the workbook and login credentials out of Git.
 
 ## Troubleshooting
 
@@ -145,5 +159,6 @@ The launcher listens on the computer's network interfaces, but that does not mak
 | `setup_login.py` says `.env` already exists | Keep using the account already configured, or have the account owner securely manage the local `.env`. Do not delete it unless you intend to configure a new local login. |
 | Server reports missing authentication settings | Run step 5 to configure the local login, then restart the server. |
 | `Employee_data.xlsx` not found | Obtain the workbook through your approved secure sharing method and put it in the project root beside `requirements.txt`. |
+| Teammate cannot open `localhost` link | `localhost` refers to the computer opening the link. Deploy the app and share the host's HTTPS URL instead. |
 | Port 8000 is already in use | Stop the other app using port 8000, or have the project owner update the port consistently in `run.bat` and the URL. |
 | Styling or chart is missing | The page needs internet access to load Bootstrap and Chart.js from their CDN. |
