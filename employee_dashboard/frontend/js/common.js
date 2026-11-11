@@ -46,12 +46,19 @@ function watchWorkbookChanges(onChange, initialVersion) {
   }, 10000);
 }
 
-document.getElementById("logout").addEventListener("click", async () => {
-  try {
-    const response = await fetch("/api/auth/logout", { method: "POST", cache: "no-store" });
-    if (!response.ok) throw new Error("Sign out failed. Please try again.");
-    window.location.assign("/login");
-  } catch (error) {
-    showError(error.message);
-  }
-});
+const logoutButton = document.getElementById("logout");
+if (logoutButton) {
+  getJSON("/api/auth/mode").then(mode => {
+    if (mode.local_only) logoutButton.hidden = true;
+  }).catch(error => showError(error.message));
+
+  logoutButton.addEventListener("click", async () => {
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST", cache: "no-store" });
+      if (!response.ok) throw new Error("Sign out failed. Please try again.");
+      window.location.assign("/");
+    } catch (error) {
+      showError(error.message);
+    }
+  });
+}

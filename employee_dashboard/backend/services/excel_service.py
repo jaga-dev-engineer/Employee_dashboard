@@ -9,7 +9,15 @@ _cached_employees: pd.DataFrame | None = None
 
 
 def _read_employees(source: str) -> pd.DataFrame:
-    df = pd.read_excel(source, sheet_name=EXCEL_SHEET_NAME, dtype=str)
+    with pd.ExcelFile(source) as workbook:
+        if EXCEL_SHEET_NAME not in workbook.sheet_names:
+            available_sheets = ", ".join(workbook.sheet_names) or "none"
+            raise ValueError(
+                f"Worksheet '{EXCEL_SHEET_NAME}' was not found in {EXCEL_PATH}. "
+                f"Available worksheets: {available_sheets}. "
+                "Sync the correct SharePoint workbook and update EXCEL_PATH in .env."
+            )
+        df = pd.read_excel(workbook, sheet_name=EXCEL_SHEET_NAME, dtype=str)
     df.columns = df.columns.astype(str).str.strip()
 
     missing = [column for column in COLUMNS if column not in df.columns]
@@ -24,7 +32,10 @@ def _read_employees(source: str) -> pd.DataFrame:
 
 def get_workbook_version() -> str:
     if not EXCEL_PATH.exists():
-        raise FileNotFoundError(f"Excel file not found: {EXCEL_PATH}")
+        raise FileNotFoundError(
+            f"Excel workbook not found at {EXCEL_PATH}. "
+            "Set EXCEL_PATH in the project's .env file to the synced workbook."
+        )
 
     stat = EXCEL_PATH.stat()
     return f"{stat.st_mtime_ns}-{stat.st_ctime_ns}-{stat.st_size}"
@@ -34,7 +45,10 @@ def load_employees() -> pd.DataFrame:
     global _cache_signature, _cached_employees
 
     if not EXCEL_PATH.exists():
-        raise FileNotFoundError(f"Excel file not found: {EXCEL_PATH}")
+        raise FileNotFoundError(
+            f"Excel workbook not found at {EXCEL_PATH}. "
+            "Set EXCEL_PATH in the project's .env file to the synced workbook."
+        )
 
     stat = EXCEL_PATH.stat()
     signature = (

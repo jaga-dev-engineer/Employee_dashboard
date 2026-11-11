@@ -1,6 +1,7 @@
 """Login and logout endpoints for the employee dashboard."""
 
 import hmac
+from ipaddress import ip_address
 import time
 from threading import Lock
 
@@ -8,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from backend.auth_utils import verify_password
-from backend.config import LOGIN_EMAIL, LOGIN_PASSWORD_HASH
+from backend.config import LOCAL_ONLY_ACCESS, LOGIN_EMAIL, LOGIN_PASSWORD_HASH
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 _ATTEMPT_WINDOW_SECONDS = 15 * 60
@@ -20,6 +21,16 @@ _attempts_lock = Lock()
 class LoginCredentials(BaseModel):
     email: str = Field(min_length=3, max_length=254)
     password: str = Field(min_length=1, max_length=1024)
+
+
+@router.get("/mode")
+def auth_mode(request: Request):
+    client_host = request.client.host if request.client else ""
+    try:
+        local_only = LOCAL_ONLY_ACCESS and ip_address(client_host).is_loopback
+    except ValueError:
+        local_only = False
+    return {"local_only": local_only}
 
 
 @router.post("/login")

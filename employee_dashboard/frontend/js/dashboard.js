@@ -7,6 +7,11 @@ const employeeFields = [
   "expected_date_of_completion", "profiles_uploaded", "contact_number",
 ];
 
+function showTableMessage(tableId, message) {
+  const table = document.getElementById(tableId);
+  table.innerHTML = `<tr><td colspan="16" class="text-center text-muted">${esc(message)}</td></tr>`;
+}
+
 async function loadSummary() {
   const summary = await getJSON("/api/dashboard/summary");
   document.getElementById("stat-total").textContent = summary.total_employees;
@@ -37,6 +42,8 @@ async function refreshDashboard() {
     document.getElementById("last-updated").textContent =
       `Data refreshed ${new Date().toLocaleTimeString()}`;
   } catch (e) {
+    showTableMessage("mapping-table", "Workbook data could not be loaded.");
+    showTableMessage("employee-table", "Workbook data could not be loaded.");
     showError(e.message);
     throw e;
   }

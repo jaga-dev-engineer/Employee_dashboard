@@ -46,6 +46,8 @@ async function refreshEmployees() {
     render();
     document.getElementById("error").classList.add("d-none");
   } catch (e) {
+    tableBody.innerHTML =
+      `<tr><td colspan="16" class="text-center text-muted">Workbook data could not be loaded.</td></tr>`;
     showError(e.message);
     throw e;
   }

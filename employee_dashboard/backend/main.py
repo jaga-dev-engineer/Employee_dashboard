@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from ipaddress import ip_address
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -14,6 +15,7 @@ from backend.config import (
     FRONTEND_DIR,
     LOGIN_EMAIL,
     LOGIN_PASSWORD_HASH,
+    LOCAL_ONLY_ACCESS,
     SESSION_SECRET,
 )
 from backend.routers import auth, dashboard, employees
@@ -21,6 +23,10 @@ from backend.routers import auth, dashboard, employees
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    if LOCAL_ONLY_ACCESS:
+        yield
+        return
+
     missing = [
         name
         for name, value in (
@@ -43,13 +49,21 @@ async def lifespan(_: FastAPI):
 class AuthenticationMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         path = request.url.path
+        client_host = request.client.host if request.client else ""
+        try:
+            local_request = LOCAL_ONLY_ACCESS and ip_address(client_host).is_loopback
+        except ValueError:
+            local_request = False
+
         public_paths = {
             "/login",
             "/api/auth/login",
             "/css/style.css",
             "/js/login.js",
         }
-        if path not in public_paths and not request.session.get("authenticated"):
+        if local_request and path == "/login":
+            response = RedirectResponse(url="/", status_code=303)
+        elif not local_request and path not in public_paths and not request.session.get("authenticated"):
             if path.startswith("/api/"):
                 response = JSONResponse(status_code=401, content={"detail": "Authentication required."})
             else:

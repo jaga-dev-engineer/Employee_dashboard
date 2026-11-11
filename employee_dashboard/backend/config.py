@@ -22,6 +22,10 @@ _cookie_secure_setting = os.getenv("COOKIE_SECURE", "true").strip().lower()
 if _cookie_secure_setting not in {"1", "true", "yes", "0", "false", "no"}:
     raise RuntimeError("COOKIE_SECURE must be true or false.")
 COOKIE_SECURE = _cookie_secure_setting in {"1", "true", "yes"}
+_local_access_setting = os.getenv("LOCAL_ONLY_ACCESS", "false").strip().lower()
+if _local_access_setting not in {"1", "true", "yes", "0", "false", "no"}:
+    raise RuntimeError("LOCAL_ONLY_ACCESS must be true or false.")
+LOCAL_ONLY_ACCESS = _local_access_setting in {"1", "true", "yes"}
 
 # Excel column name -> API field name. Other worksheet columns are ignored.
 COLUMNS = {

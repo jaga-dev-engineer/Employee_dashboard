@@ -17,7 +17,9 @@ os.environ["SESSION_SECRET"] = "test-only-session-secret-that-is-long-enough"
 os.environ["COOKIE_SECURE"] = "false"
 
 from backend.config import COLUMNS, EXCEL_SHEET_NAME
+from backend import main
 from backend.main import app
+from backend.routers import auth
 from backend.services import excel_service
 
 
@@ -79,6 +81,24 @@ def test_dashboard_requires_login():
         assert anonymous_client.get("/api/dashboard/summary").status_code == 401
 
 
+def test_local_only_access_opens_dashboard_without_login(client, monkeypatch):
+    monkeypatch.setattr(main, "LOCAL_ONLY_ACCESS", True)
+    monkeypatch.setattr(auth, "LOCAL_ONLY_ACCESS", True)
+
+    with TestClient(app, client=("127.0.0.1", 50000)) as local_client:
+        response = local_client.get("/", follow_redirects=False)
+        assert response.status_code == 200
+        assert local_client.get("/login", follow_redirects=False).headers["location"] == "/"
+        assert local_client.get("/api/employees").status_code == 200
+        assert local_client.get("/api/auth/mode").json() == {"local_only": True}
+
+    with TestClient(app, client=("192.0.2.1", 50001)) as remote_client:
+        response = remote_client.get("/", follow_redirects=False)
+        assert response.status_code == 303
+        assert response.headers["location"] == "/login"
+        assert remote_client.get("/api/employees").status_code == 401
+
+
 def test_login_and_logout(client):
     assert client.get("/").status_code == 200
     assert client.get("/api/dashboard/summary").status_code == 200
@@ -102,6 +122,18 @@ def test_api_returns_only_columns_from_named_worksheet(client):
         "internal_employees": 1,
         "external_employees": 0,
     }
+
+
+def test_missing_requested_worksheet_reports_available_sheets(client, tmp_path, monkeypatch):
+    workbook_path = tmp_path / "Employee_data.xlsx"
+    pd.DataFrame([employee_row()]).to_excel(workbook_path, sheet_name="Wrong worksheet", index=False)
+    monkeypatch.setattr(excel_service, "EXCEL_PATH", workbook_path)
+
+    response = client.get("/api/employees")
+
+    assert response.status_code == 500
+    assert "Data Practice Resources" in response.json()["detail"]
+    assert "Wrong worksheet" in response.json()["detail"]
 
 
 def test_employee_filters_use_requested_columns(client, tmp_path, monkeypatch):

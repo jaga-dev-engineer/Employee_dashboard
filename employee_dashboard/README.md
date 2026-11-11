@@ -1,6 +1,6 @@
 # Employee Dashboard
 
-Internal dashboard built from an Excel file: **Excel -> Pandas -> FastAPI -> HTML/Bootstrap**. The dashboard requires an email and password to sign in.
+Internal dashboard built from an Excel file: **Excel -> Pandas -> FastAPI -> HTML/Bootstrap**. The local launcher opens the dashboard directly at `http://127.0.0.1:8000` and binds only to this computer. Deployed instances still require sign-in.
 The dashboard reads only the `Data Practice Resources` worksheet from the configured local workbook path. Set `EXCEL_PATH` to the workbook in a OneDrive/SharePoint-synced folder. Dashboard pages check for workbook changes every 10 seconds and automatically reload the displayed data after it is saved. **Refresh data** is also available for immediate manual refresh.
 
 ## Folder structure
@@ -31,9 +31,11 @@ employee_dashboard/
 
 For steps to create your own private GitHub repository, share it with teammates to clone, and install/run local copies on Windows, see [SETUP.md](./SETUP.md). Requires Git for Windows and Python 3.10+.
 
-## Configure login
+## Local access and deployed login
 
-From the project root, run:
+For local use, create the virtual environment and configure `EXCEL_PATH` as described in [SETUP.md](./SETUP.md). The local launcher skips login and binds only to this computer. Each authorized user must run their own local dashboard against a workbook file they can access. Do not expose local-only mode on a network or public host.
+
+For a deployed instance, configure a login by running:
 
 ```
 python setup_login.py
@@ -41,18 +43,18 @@ python setup_login.py
 
 Enter the one dashboard account email and a password of at least 12 characters. The script stores a salted password hash and a random session-signing secret in `.env`; it does not save the plain-text password. `.env` is ignored by Git. Do not share or commit it. The setup script refuses to overwrite an existing `.env`.
 
-For local HTTP testing, the generated configuration uses `COOKIE_SECURE=false`. **Before hosting on the internet, set `COOKIE_SECURE=true` and serve the app only over HTTPS.** Keep the session secret and password hash in the hosting provider's protected environment settings; do not upload `.env` or put credentials in source code.
+The generated configuration uses `COOKIE_SECURE=false` for local HTTP. **Before hosting on the internet, set `COOKIE_SECURE=true` and serve the app only over HTTPS.** Keep the session secret and password hash in the hosting provider's protected environment settings; do not upload `.env` or put credentials in source code.
 
 ## Run
 
-On Windows, run `run.bat` from this project folder. On macOS/Linux, run `./run.sh`. These launchers listen on `0.0.0.0:8000`. Keep the terminal and host computer running.
+On Windows, run `run.bat` from this project folder. On macOS/Linux, run `./run.sh`. These local launchers bind only to `127.0.0.1:8000`. Keep the terminal and host computer running.
 
-- On the host computer: http://localhost:8000
-- The sign-in page is shown before the dashboard and employee API are available.
+- On the host computer: http://127.0.0.1:8000
+- The local dashboard opens directly without a sign-in page.
 
-Running on your PC does not create a public internet URL. `http://localhost:8000/` works only on the computer running the app. For a public demo, this repository includes a Render Blueprint in the repository root; the build generates a synthetic `data/employees.xlsx` with the expected worksheet and uses HTTPS. See [SETUP.md](./SETUP.md) for deployment steps. The demo does not use or expose the private SharePoint workbook. For the real dashboard, use an approved host and keep the sharing URL private. Do not expose the development server directly to the public internet.
+Running on your PC does not create a public internet URL. `http://127.0.0.1:8000/` works only on the computer running the app. For a public demo, this repository includes a Render Blueprint in the repository root; the build generates a synthetic `data/employees.xlsx` with the expected worksheet and uses HTTPS. See [SETUP.md](./SETUP.md) for deployment steps. The demo does not use or expose the private SharePoint workbook. For the real dashboard, use an approved host and provide its workbook through a protected, readable `EXCEL_PATH`. Do not expose the development server directly to the public internet.
 
-The configured login is a single shared account for this initial version; it does not provide individual user accounts or account recovery. Share the credentials only with authorized teammates.
+Deployed instances use one shared login account; they do not provide individual user accounts or account recovery. Share credentials only with authorized teammates.
 
 ## Excel rules
 
@@ -90,7 +92,7 @@ pytest
 
 | Problem | Fix |
 |---|---|
-| Missing authentication settings | Run `python setup_login.py` and restart the server |
+| Deployed app reports missing authentication settings | Run `python setup_login.py` and restart the server |
 | Login cookie is not retained on the internet host | Use HTTPS and set `COOKIE_SECURE=true` |
 | No module named 'backend' | Run commands from the project root |
 | 503 Excel file not found | Check that `EXCEL_PATH` points to the synced workbook and that the server can read it |

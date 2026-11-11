@@ -1,4 +1,5 @@
 @echo off
-REM Starts the dashboard on your network. Run setup first (see README.md).
+REM Local-only dashboard access; employee data is not exposed to the network.
 call venv\Scripts\activate
-uvicorn backend.main:app --host 0.0.0.0 --port 8000
+set LOCAL_ONLY_ACCESS=true
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
