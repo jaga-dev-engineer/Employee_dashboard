@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
+EXCEL_SHEET_NAME = "Data Practice Resources"
 _configured_excel_path = Path(os.getenv("EXCEL_PATH", "Employee_data.xlsx")).expanduser()
 EXCEL_PATH = (
     _configured_excel_path
@@ -22,14 +23,22 @@ if _cookie_secure_setting not in {"1", "true", "yes", "0", "false", "no"}:
     raise RuntimeError("COOKIE_SECURE must be true or false.")
 COOKIE_SECURE = _cookie_secure_setting in {"1", "true", "yes"}
 
-# Excel column name -> API field name
+# Excel column name -> API field name. Other worksheet columns are ignored.
 COLUMNS = {
-    "S.no": "serial_number",
+    "#": "serial_number",
     "Employee ID": "employee_id",
     "Employee Name": "name",
-    "Managers": "manager",
+    "Technical Skills": "technical_skills",
+    "YOE": "yoe",
     "Email": "email",
+    "DOJ DEP": "doj_dep",
+    "Internal/External": "internal_external",
     "Mapped to Project": "mapped_to_project",
-    "Location": "location",
+    "Billable from": "billable_from",
+    "Client Name": "client_name",
+    "Certification Name": "certification_name",
+    "Date of Completion": "date_of_completion",
+    "Expected Date of Completion": "expected_date_of_completion",
+    "Profiles Uploaded": "profiles_uploaded",
     "Contact Number": "contact_number",
 }

@@ -23,17 +23,24 @@
     <div id="error" class="alert alert-danger d-none" role="alert"></div>
 
     <div class="row g-2 mb-3">
-      <div class="col-md-5"><input id="search" class="form-control" placeholder="Search by name, ID, email..." aria-label="Search employees"></div>
-      <div class="col-md-2"><select id="manager" class="form-select" aria-label="Manager"><option value="">All managers</option></select></div>
-      <div class="col-md-2"><select id="loc" class="form-select" aria-label="Location"><option value="">All locations</option></select></div>
-      <div class="col-md-2"><select id="mapping" class="form-select" aria-label="Mapped to Project"><option value="">All project mappings</option></select></div>
+      <div class="col-md-6"><input id="search" class="form-control" placeholder="Search employee data..." aria-label="Search employee data"></div>
+      <div class="col-md-3"><select id="work-type" class="form-select" aria-label="Internal or external">
+        <option value="">All internal/external</option><option value="Internal">Internal</option><option value="External">External</option>
+      </select></div>
+      <div class="col-md-3"><select id="mapping" class="form-select" aria-label="Mapped to Project"><option value="">All project mappings</option></select></div>
     </div>
     <p id="count" class="text-muted small"></p>
 
     <div class="card"><div class="table-responsive">
       <table class="table table-hover mb-0">
-        <thead><tr><th>S.no</th><th>Employee ID</th><th>Employee Name</th><th>Manager</th><th>Email</th><th>Mapped to Project</th><th>Location</th><th>Contact Number</th></tr></thead>
-        <tbody id="emp-table"><tr><td colspan="8" class="text-muted">Loading...</td></tr></tbody>
+        <thead><tr>
+          <th>#</th><th>Employee ID</th><th>Employee Name</th><th>Technical Skills</th>
+          <th>YOE</th><th>Email</th><th>DOJ DEP</th><th>Internal/External</th>
+          <th>Mapped to Project</th><th>Billable from</th><th>Client Name</th>
+          <th>Certification Name</th><th>Date of Completion</th>
+          <th>Expected Date of Completion</th><th>Profiles Uploaded</th><th>Contact Number</th>
+        </tr></thead>
+        <tbody id="emp-table"><tr><td colspan="16" class="text-muted">Loading...</td></tr></tbody>
       </table>
     </div></div>
   </main>

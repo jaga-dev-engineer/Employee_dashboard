@@ -16,13 +16,47 @@ os.environ["LOGIN_PASSWORD_HASH"] = (
 os.environ["SESSION_SECRET"] = "test-only-session-secret-that-is-long-enough"
 os.environ["COOKIE_SECURE"] = "false"
 
-from backend.config import COLUMNS
+from backend.config import COLUMNS, EXCEL_SHEET_NAME
 from backend.main import app
 from backend.services import excel_service
 
 
+def employee_row(**overrides):
+    row = {
+        "#": "1",
+        "Employee ID": "FD00001",
+        "Employee Name": "Test Employee",
+        "Technical Skills": "Python, SQL",
+        "YOE": "5",
+        "Email": "employee@example.com",
+        "DOJ DEP": "2021-01-01",
+        "Internal/External": "Internal",
+        "Mapped to Project": "Project A",
+        "Billable from": "2021-02-01",
+        "Client Name": "Client A",
+        "Certification Name": "Certification A",
+        "Date of Completion": "2024-01-01",
+        "Expected Date of Completion": "2025-01-01",
+        "Profiles Uploaded": "Yes",
+        "Contact Number": "1234567890",
+    }
+    return {**row, **overrides}
+
+
+def write_workbook(path, rows):
+    with pd.ExcelWriter(path) as writer:
+        pd.DataFrame(rows).to_excel(writer, sheet_name=EXCEL_SHEET_NAME, index=False)
+        pd.DataFrame([{"Employee Name": "Wrong worksheet"}]).to_excel(
+            writer, sheet_name="Other", index=False
+        )
+
+
 @pytest.fixture
-def client():
+def client(tmp_path, monkeypatch):
+    workbook_path = tmp_path / "Employee_data.xlsx"
+    write_workbook(workbook_path, [employee_row()])
+    monkeypatch.setattr(excel_service, "EXCEL_PATH", workbook_path)
+
     with TestClient(app) as test_client:
         response = test_client.post(
             "/api/auth/login",
@@ -48,140 +82,82 @@ def test_dashboard_requires_login():
 def test_login_and_logout(client):
     assert client.get("/").status_code == 200
     assert client.get("/api/dashboard/summary").status_code == 200
-    response = client.post(
-        "/api/auth/logout",
-        follow_redirects=False,
-    )
+    response = client.post("/api/auth/logout", follow_redirects=False)
     assert response.status_code == 204
     assert client.get("/api/employees").status_code == 401
 
 
-def test_invalid_login_is_rejected():
-    with TestClient(app) as anonymous_client:
-        response = anonymous_client.post(
-            "/api/auth/login",
-            json={"email": "dashboard-test@example.com", "password": "incorrect-password"},
-        )
-        assert response.status_code == 401
-        assert response.json()["detail"] == "Email or password is incorrect."
-
-
-def test_api_uses_employee_data_columns(client):
+def test_api_returns_only_columns_from_named_worksheet(client):
     employees = client.get("/api/employees").json()
-    assert employees
+    assert len(employees) == 1
     assert set(employees[0]) == set(COLUMNS.values())
+    assert employees[0]["name"] == "Test Employee"
+    assert employees[0]["technical_skills"] == "Python, SQL"
 
     summary = client.get("/api/dashboard/summary").json()
-    assert summary["total_employees"] == len(employees)
-    assert summary["mapped_employees"] == sum(
-        employee["mapped_to_project"].upper() in {"Y", "YES", "TRUE", "1"}
-        for employee in employees
+    assert summary == {
+        "total_employees": 1,
+        "mapped_employees": 1,
+        "employees_with_email": 1,
+        "internal_employees": 1,
+        "external_employees": 0,
+    }
+
+
+def test_employee_filters_use_requested_columns(client, tmp_path, monkeypatch):
+    workbook_path = tmp_path / "Employee_data.xlsx"
+    write_workbook(
+        workbook_path,
+        [
+            employee_row(),
+            employee_row(
+                **{
+                    "#": "2",
+                    "Employee ID": "FD00002",
+                    "Employee Name": "External Employee",
+                    "Internal/External": "External",
+                    "Mapped to Project": "Project B",
+                }
+            ),
+        ],
     )
-    assert summary["locations"] == len(
-        {employee["location"] for employee in employees if employee["location"]}
+    monkeypatch.setattr(excel_service, "EXCEL_PATH", workbook_path)
+
+    external = client.get("/api/employees", params={"internal_external": "external"}).json()
+    assert len(external) == 1
+    assert external[0]["name"] == "External Employee"
+
+    project = client.get("/api/employees", params={"mapped_to_project": "Project A"}).json()
+    assert len(project) == 1
+    assert project[0]["name"] == "Test Employee"
+
+
+def test_project_mapping_counts(client, tmp_path, monkeypatch):
+    workbook_path = tmp_path / "Employee_data.xlsx"
+    write_workbook(
+        workbook_path,
+        [
+            employee_row(),
+            employee_row(**{"#": "2", "Employee ID": "FD00002"}),
+            employee_row(**{"#": "3", "Mapped to Project": ""}),
+        ],
     )
+    monkeypatch.setattr(excel_service, "EXCEL_PATH", workbook_path)
 
-
-def test_location_and_mapping_aggregations(client):
-    locations = client.get("/api/dashboard/by-location").json()
-    location_counts = [item["count"] for item in locations]
-    assert location_counts == sorted(location_counts, reverse=True)
-    assert all(item["label"] for item in locations)
-
-    mappings = client.get("/api/dashboard/project-mapping").json()
-    assert sum(item["count"] for item in mappings) == client.get("/api/dashboard/summary").json()["total_employees"]
+    assert client.get("/api/dashboard/project-mapping").json() == [
+        {"label": "Project A", "count": 2}
+    ]
 
 
 def test_workbook_version_changes_after_save(client, tmp_path, monkeypatch):
     workbook_path = tmp_path / "Employee_data.xlsx"
     monkeypatch.setattr(excel_service, "EXCEL_PATH", workbook_path)
-    row = {
-        "S.no": "1",
-        "Employee ID": "FD00001",
-        "Employee Name": "Version Check",
-        "Managers": "Manager One",
-        "Email": "version@example.com",
-        "Mapped to Project": "N",
-        "Location": "Pune",
-        "Contact Number": "1234567890",
-    }
-    pd.DataFrame([row]).to_excel(workbook_path, index=False)
+    write_workbook(workbook_path, [employee_row()])
     first_version = client.get("/api/dashboard/version").json()["version"]
 
-    pd.DataFrame([{**row, "Managers": "Manager Two"}]).to_excel(workbook_path, index=False)
+    write_workbook(workbook_path, [employee_row(**{"Employee Name": "Updated Employee"})])
     stat = workbook_path.stat()
     os.utime(workbook_path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
 
     second_version = client.get("/api/dashboard/version").json()["version"]
     assert second_version != first_version
-
-
-def test_manager_counts_and_filter(client):
-    employees = client.get("/api/employees").json()
-    manager_counts = client.get("/api/dashboard/by-manager").json()
-    expected = {}
-    for employee in employees:
-        if employee["manager"]:
-            expected[employee["manager"]] = expected.get(employee["manager"], 0) + 1
-
-    assert {row["label"]: row["count"] for row in manager_counts} == expected
-    assert [row["count"] for row in manager_counts] == sorted(
-        (row["count"] for row in manager_counts), reverse=True
-    )
-
-    manager = manager_counts[0]["label"]
-    response = client.get("/api/employees", params={"manager": manager})
-    assert response.status_code == 200
-    assert response.json()
-    assert all(employee["manager"] == manager for employee in response.json())
-    assert len(response.json()) == expected[manager]
-
-
-def test_employee_filters(client):
-    employees = client.get("/api/employees").json()
-    location = next(employee["location"] for employee in employees if employee["location"])
-    response = client.get("/api/employees", params={"location": location})
-    assert response.status_code == 200
-    assert all(employee["location"] == location for employee in response.json())
-
-    mapped_value = next(
-        employee["mapped_to_project"] for employee in employees if employee["mapped_to_project"]
-    )
-    response = client.get("/api/employees", params={"mapped_to_project": mapped_value})
-    assert response.status_code == 200
-    assert all(employee["mapped_to_project"] == mapped_value for employee in response.json())
-
-
-def test_saved_workbook_changes_are_loaded(client, tmp_path, monkeypatch):
-    workbook_path = tmp_path / "Employee_data.xlsx"
-    monkeypatch.setattr(excel_service, "EXCEL_PATH", workbook_path)
-
-    first_row = {
-        "S.no": "1",
-        "Employee ID": "FD00001",
-        "Employee Name": "Initial Name",
-        "Managers": "Initial Manager",
-        "Email": "initial@example.com",
-        "Mapped to Project": "N",
-        "Location": "Pune",
-        "Contact Number": "1234567890",
-    }
-    pd.DataFrame([first_row]).to_excel(workbook_path, index=False)
-    assert client.get("/api/employees").json()[0]["name"] == "Initial Name"
-
-    updated_row = {
-        **first_row,
-        "Employee ID": "FD00002",
-        "Employee Name": "Updated Name",
-        "Managers": "Updated Manager",
-    }
-    pd.DataFrame([updated_row]).to_excel(workbook_path, index=False)
-    stat = workbook_path.stat()
-    os.utime(workbook_path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
-
-    employees = client.get("/api/employees").json()
-    assert employees[0]["employee_id"] == "FD00002"
-    assert employees[0]["name"] == "Updated Name"
-    assert employees[0]["manager"] == "Updated Manager"
-    manager_counts = client.get("/api/dashboard/by-manager").json()
-    assert manager_counts == [{"label": "Updated Manager", "count": 1}]

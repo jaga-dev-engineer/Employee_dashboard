@@ -5,3 +5,4 @@ __pycache__/
 .env
 Employee_data.xlsx
 ~$*.xlsx
+/data/data.py

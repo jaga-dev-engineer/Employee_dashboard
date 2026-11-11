@@ -1,26 +1,27 @@
-// Employee directory: search the workbook rows and filter by location or project mapping.
+// Employee directory: search worksheet rows and filter by work type or project.
 
 const tableBody = document.getElementById("emp-table");
+const employeeFields = [
+  "serial_number", "employee_id", "name", "technical_skills", "yoe", "email",
+  "doj_dep", "internal_external", "mapped_to_project", "billable_from",
+  "client_name", "certification_name", "date_of_completion",
+  "expected_date_of_completion", "profiles_uploaded", "contact_number",
+];
 let allEmployees = [];
 
 function render() {
   const query = document.getElementById("search").value.toLowerCase();
-  const manager = document.getElementById("manager").value;
-  const location = document.getElementById("loc").value;
+  const workType = document.getElementById("work-type").value;
   const mapping = document.getElementById("mapping").value;
 
   const rows = allEmployees.filter(employee =>
-    (!manager || employee.manager === manager) &&
-    (!location || employee.location === location) &&
+    (!workType || employee.internal_external.toLowerCase() === workType.toLowerCase()) &&
     (!mapping || employee.mapped_to_project === mapping) &&
     Object.values(employee).join(" ").toLowerCase().includes(query));
 
-  tableBody.innerHTML = rows.map(employee => `<tr>
-    <td>${esc(employee.serial_number)}</td><td>${esc(employee.employee_id)}</td>
-    <td>${esc(employee.name)}</td><td>${esc(employee.manager)}</td><td>${esc(employee.email)}</td>
-    <td>${esc(employee.mapped_to_project)}</td><td>${esc(employee.location)}</td>
-    <td>${esc(employee.contact_number)}</td>
-  </tr>`).join("") || `<tr><td colspan="8" class="text-center text-muted">No employees match your filters</td></tr>`;
+  tableBody.innerHTML = rows.map(employee =>
+    `<tr>${employeeFields.map(field => `<td>${esc(employee[field])}</td>`).join("")}</tr>`
+  ).join("") || `<tr><td colspan="16" class="text-center text-muted">No employees match your filters</td></tr>`;
 
   document.getElementById("count").textContent = `${rows.length} of ${allEmployees.length} employees`;
 }
@@ -41,8 +42,6 @@ function fillOptions(id, values, label) {
 async function refreshEmployees() {
   try {
     allEmployees = await getJSON("/api/employees");
-    fillOptions("manager", allEmployees.map(employee => employee.manager), "All managers");
-    fillOptions("loc", allEmployees.map(employee => employee.location), "All locations");
     fillOptions("mapping", allEmployees.map(employee => employee.mapped_to_project), "All project mappings");
     render();
     document.getElementById("error").classList.add("d-none");
@@ -53,7 +52,7 @@ async function refreshEmployees() {
 }
 
 document.getElementById("search").addEventListener("input", render);
-["manager", "loc", "mapping"].forEach(id => document.getElementById(id).addEventListener("change", render));
+["work-type", "mapping"].forEach(id => document.getElementById(id).addEventListener("change", render));
 
 async function initEmployees() {
   let initialVersion = null;

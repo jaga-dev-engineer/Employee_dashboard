@@ -1,11 +1,25 @@
-"""Reads and cleans the Excel file, reloading it when the source changes."""
+"""Reads the configured Excel worksheet without modifying its source."""
 
 import pandas as pd
 
-from backend.config import COLUMNS, EXCEL_PATH
+from backend.config import COLUMNS, EXCEL_PATH, EXCEL_SHEET_NAME
 
 _cache_signature: tuple[str, int, int, int] | None = None
 _cached_employees: pd.DataFrame | None = None
+
+
+def _read_employees(source: str) -> pd.DataFrame:
+    df = pd.read_excel(source, sheet_name=EXCEL_SHEET_NAME, dtype=str)
+    df.columns = df.columns.astype(str).str.strip()
+
+    missing = [column for column in COLUMNS if column not in df.columns]
+    if missing:
+        raise ValueError(f"Missing columns in Excel: {missing}")
+
+    df = df[list(COLUMNS)].dropna(how="all").fillna("")
+    for column in df.columns:
+        df[column] = df[column].astype(str).str.strip()
+    return df
 
 
 def get_workbook_version() -> str:
@@ -32,17 +46,7 @@ def load_employees() -> pd.DataFrame:
     if _cached_employees is not None and _cache_signature == signature:
         return _cached_employees
 
-    df = pd.read_excel(EXCEL_PATH, dtype=str)
-    df.columns = df.columns.str.strip()
-
-    missing = [c for c in COLUMNS if c not in df.columns]
-    if missing:
-        raise ValueError(f"Missing columns in Excel: {missing}")
-
-    df = df[list(COLUMNS)].dropna(how="all").fillna("")
-    for col in df.columns:
-        df[col] = df[col].astype(str).str.strip()
-
+    df = _read_employees(str(EXCEL_PATH))
     _cached_employees = df
     _cache_signature = signature
     return df
